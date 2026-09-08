@@ -1,0 +1,193 @@
+/* Foglio di stile minimo: l'esercizio e' sul backend e sul canale,
+   qui basta che le quattro schermate siano leggibili. */
+
+:root {
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+  color: #1a1a1a;
+}
+
+body {
+  margin: 0;
+  padding: 1.5rem;
+  max-width: 46rem;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+h1 {
+  font-size: 1.4rem;
+  margin: 0;
+}
+
+.spalla {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.nota {
+  color: #666;
+  font-size: 0.875rem;
+  margin: 0.25rem 0;
+}
+
+.errore {
+  color: #b00020;
+  font-size: 0.9rem;
+}
+
+button {
+  font: inherit;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid #999;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.titolo {
+  border: none;
+  padding: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  background: none;
+  text-decoration: underline;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+input,
+textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  padding: 0.4rem;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+}
+
+.bottoni {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.riquadro {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.stretto {
+  max-width: 22rem;
+}
+
+.elenco,
+.messaggi {
+  list-style: none;
+  padding: 0;
+}
+
+.elenco li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.messaggi li {
+  border-bottom: 1px solid #eee;
+  padding: 0.5rem 0;
+}
+
+.scrittura {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+  margin-top: 1rem;
+}
+
+/* --- campanella --- */
+
+.campanella {
+  position: relative;
+}
+
+.campanella > button {
+  font-size: 1.3rem;
+  border: none;
+  background: none;
+}
+
+.badge {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  background: #d00;
+  color: #fff;
+  border-radius: 999px;
+  padding: 0 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.pannello {
+  position: absolute;
+  right: 0;
+  z-index: 10;
+  width: 22rem;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
+  padding: 0.75rem;
+}
+
+.pannello-testa {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.pannello ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 18rem;
+  overflow-y: auto;
+}
+
+.pannello li {
+  padding: 0.5rem 0;
+  border-top: 1px solid #eee;
+  font-size: 0.9rem;
+}
+
+.da-leggere {
+  font-weight: 600;
+}
+
+.letta {
+  color: #666;
+}

@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: bacheche
+
+  datasource:
+    # ${VARIABILE:default}: se la variabile d'ambiente esiste vince lei,
+    # altrimenti si usa il valore scritto qui. Cosi' il progetto parte
+    # senza configurare niente, ma in consegna non c'e' una password fissa nel codice.
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/bacheche}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:admin}
+
+  jpa:
+    hibernate:
+      # update: all'avvio Hibernate legge le classi @Entity e crea/aggiorna le tabelle.
+      # Va benissimo per un esercizio, NON in produzione (li' si usano migrazioni).
+      ddl-auto: update
+    # IMPORTANTISSIMO con ddl-auto: senza questa riga data.sql verrebbe eseguito
+    # PRIMA che Hibernate crei le tabelle, e fallirebbe con
+    # "relation topics does not exist". defer rimanda l'inserimento dei dati
+    # a dopo la creazione dello schema.
+    defer-datasource-initialization: true
+    # false: la sessione Hibernate si chiude quando finisce il service.
+    # Se restasse aperta fino alla scrittura della risposta, Jackson potrebbe
+    # far partire query lazy a nostra insaputa mentre serializza.
+    open-in-view: false
+    # Vedere le query aiuta a verificare una cosa precisa della consegna:
+    # "segna tutte lette" deve produrre UNA sola UPDATE.
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          # Le date si salvano sempre in UTC. Il fuso e' un problema di chi mostra il dato.
+          time_zone: UTC
+
+  sql:
+    init:
+      # Esegue data.sql all'avvio (i tre topic di partenza).
+      mode: always
+
+app:
+  cors:
+    # Lo stesso indirizzo serve due volte: a CorsConfig per le chiamate REST
+    # e a WebSocketConfig per l'handshake dell'endpoint /ws. Sono due autorizzazioni distinte.
+    allowed-origin: ${ALLOWED_ORIGIN:http://localhost:5173}
+
+logging:
+  level:
+    it.epicode.bacheche: DEBUG
+    # Le tre fasi del canale: handshake, sessione STOMP (CONNECT/DISCONNECT), sottoscrizioni.
+    org.springframework.web.socket: DEBUG
+    org.springframework.web.socket.messaging: DEBUG
+    org.springframework.messaging.simp.broker: DEBUG

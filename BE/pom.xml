@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<!--
+		Spring Boot 4.1.1: e' la versione usata anche nel materiale del corso.
+		Attenzione ai nomi degli starter: in Boot 4 "spring-boot-starter-web"
+		si chiama "spring-boot-starter-webmvc". Copiare un pom vecchio da
+		internet e' il modo piu' rapido per ritrovarsi con un artifact inesistente.
+	-->
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>4.1.1</version>
+		<relativePath/>
+	</parent>
+
+	<groupId>it.epicode</groupId>
+	<artifactId>bacheche</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>bacheche</name>
+	<description>Pratica S5/L2 - piccolo Reddit con topic, iscrizioni, messaggi e notifiche in tempo reale</description>
+
+	<properties>
+		<!--
+			Java 25. Il parent di Boot passa questo valore al compilatore
+			(maven.compiler.release), quindi basta questa riga: non serve
+			configurare a mano source/target nel maven-compiler-plugin.
+		-->
+		<java.version>25</java.version>
+	</properties>
+
+	<dependencies>
+		<!-- REST: controller, Jackson per il JSON, Tomcat embedded. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webmvc</artifactId>
+		</dependency>
+
+		<!--
+			WebSocket + STOMP. Porta dentro spring-websocket e spring-messaging:
+			senza questo starter @EnableWebSocketMessageBroker non esiste.
+		-->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-websocket</artifactId>
+		</dependency>
+
+		<!-- JPA/Hibernate: le cinque entita' del Passo 1 vivono qui. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+
+		<!--
+			Validation: e' quello che fa rispondere 400 quando arriva
+			{ "text": "" } invece di lasciare che l'errore esploda piu' avanti.
+			@Valid senza questa dipendenza viene semplicemente ignorato.
+		-->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-validation</artifactId>
+		</dependency>
+
+		<!--
+			SOLO la parte crypto di Spring Security, non lo starter completo.
+			Ci serve BCryptPasswordEncoder per non salvare le password in chiaro.
+			Se aggiungessimo spring-boot-starter-security, Spring metterebbe in piedi
+			la sua catena di filtri e ci chiederebbe il login su ogni endpoint:
+			in questo esercizio l'autenticazione la gestiamo noi con un token opaco.
+		-->
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-crypto</artifactId>
+		</dependency>
+
+		<!-- Il driver del database. runtime: serve all'avvio, non in compilazione. -->
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+
+		<!--
+			Lombok genera getter e costruttori vuoti a compile time.
+			optional=true: chi userebbe questo jar come libreria non se lo ritrova addosso.
+		-->
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<optional>true</optional>
+		</dependency>
+
+		<!-- Riavvio automatico quando salvi un file. Comodo mentre si sviluppa. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<scope>runtime</scope>
+			<optional>true</optional>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<excludes>
+						<exclude>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<!--
+						Da Java 23 in poi il compilatore non "trova" piu' da solo i processori
+						di annotazioni nel classpath: vanno dichiarati. Senza queste righe
+						Lombok non gira e il progetto non compila (metodi getX inesistenti).
+					-->
+					<annotationProcessorPaths>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</path>
+					</annotationProcessorPaths>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+</project>

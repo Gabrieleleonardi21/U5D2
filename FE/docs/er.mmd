@@ -1,0 +1,46 @@
+%% Il solo diagramma ER, in un file .mmd separato:
+%% si apre direttamente su https://mermaid.live o con l'estensione Mermaid di VS Code.
+erDiagram
+    USERS ||--o{ SUBSCRIPTIONS : "si iscrive"
+    TOPICS ||--o{ SUBSCRIPTIONS : "ha iscritti"
+    USERS ||--o{ MESSAGES : "scrive"
+    TOPICS ||--o{ MESSAGES : "raccoglie"
+    USERS ||--o{ NOTIFICATIONS : "e destinatario"
+    MESSAGES ||--o{ NOTIFICATIONS : "genera una riga per iscritto"
+
+    USERS {
+        bigint id PK
+        varchar username UK
+        varchar password_hash
+        timestamp created_at
+    }
+
+    TOPICS {
+        bigint id PK
+        varchar name UK
+        varchar title
+        varchar description
+    }
+
+    SUBSCRIPTIONS {
+        bigint id PK
+        bigint user_id FK
+        bigint topic_id FK
+        timestamp subscribed_at
+    }
+
+    MESSAGES {
+        bigint id PK
+        bigint topic_id FK
+        bigint author_id FK
+        varchar text
+        timestamp created_at
+    }
+
+    NOTIFICATIONS {
+        bigint id PK
+        bigint recipient_id FK
+        bigint message_id FK
+        timestamp created_at
+        timestamp read_at
+    }

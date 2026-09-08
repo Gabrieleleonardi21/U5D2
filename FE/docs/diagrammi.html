@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Diagrammi del progetto</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0 auto; padding: 2rem 1.5rem 4rem; max-width: 1200px;
+         font: 15px/1.5 -apple-system, system-ui, sans-serif; }
+  h1 { font-size: 1.6rem; }
+  h2 { font-size: 1.05rem; margin: 2.5rem 0 .5rem; padding-bottom: .4rem;
+       border-bottom: 1px solid color-mix(in srgb, currentColor 20%, transparent); }
+  /* i diagrammi larghi scorrono nel loro riquadro, la pagina non si allarga */
+  .diagramma { overflow-x: auto; padding: 1rem 0; }
+  .diagramma svg { max-width: 100%; height: auto; }
+  .errore { padding: .8rem 1rem; border-radius: 6px; white-space: pre-wrap;
+            font-family: ui-monospace, monospace; font-size: 13px;
+            background: #fee; color: #900; border: 1px solid #f99; }
+  @media (prefers-color-scheme: dark) { .errore { background: #3a1212; color: #f9a; border-color: #722; } }
+</style>
+</head>
+<body>
+<h1>Diagrammi del progetto</h1>
+<div id="contenitore"></div>
+
+<script src="vendor/mermaid.min.js"></script>
+<script>
+const SORGENTI = [{"titolo": "1. Il modello dei dati (Passo 1)", "src": "erDiagram\n    USERS ||--o{ SUBSCRIPTIONS : \"si iscrive\"\n    TOPICS ||--o{ SUBSCRIPTIONS : \"ha iscritti\"\n    USERS ||--o{ MESSAGES : \"scrive\"\n    TOPICS ||--o{ MESSAGES : \"raccoglie\"\n    USERS ||--o{ NOTIFICATIONS : \"e destinatario\"\n    MESSAGES ||--o{ NOTIFICATIONS : \"genera una riga per iscritto\"\n\n    USERS {\n        bigint id PK \"IDENTITY\"\n        varchar username UK \"unico, 60 caratteri, e anche il Principal STOMP\"\n        varchar password_hash \"BCrypt, mai in chiaro\"\n        timestamp created_at \"updatable false\"\n    }\n\n    TOPICS {\n        bigint id PK\n        varchar name UK \"minuscolo, va nell URL e in /topic/feed/{name}\"\n        varchar title \"titolo leggibile\"\n        varchar description\n    }\n\n    SUBSCRIPTIONS {\n        bigint id PK\n        bigint user_id FK \"ManyToOne LAZY\"\n        bigint topic_id FK \"ManyToOne LAZY\"\n        timestamp subscribed_at\n        constraint uk_user_topic \"UNIQUE user_id topic_id - traduce il doppio clic in 409\"\n    }\n\n    MESSAGES {\n        bigint id PK\n        bigint topic_id FK\n        bigint author_id FK\n        varchar text \"max 500\"\n        timestamp created_at\n        index idx_topic_created \"topic_id created_at - lo storico dal piu recente\"\n    }\n\n    NOTIFICATIONS {\n        bigint id PK\n        bigint recipient_id FK \"una riga PER DESTINATARIO\"\n        bigint message_id FK\n        timestamp created_at\n        timestamp read_at \"null = non letta\"\n        index idx_recipient_read \"recipient_id read_at - il contatore del badge\"\n    }"}, {"titolo": "2. L'architettura: chi chiama chi", "src": "flowchart TB\n    subgraph FE[\"Frontend - React + TypeScript\"]\n        APP[\"App.tsx<br/>tiene la sessione\"]\n        LOGIN[\"Login.tsx\"]\n        ELENCO[\"ElencoBacheche.tsx\"]\n        BACHECA[\"Bacheca.tsx\"]\n        CAMP[\"Campanella.tsx\"]\n        API[\"api.ts<br/>fetch + header Authorization\"]\n        STOMP[\"stompClient.ts<br/>UN SOLO Client\"]\n    end\n\n    subgraph WEB[\"Backend - web\"]\n        AUTHC[\"AuthController\"]\n        TOPICC[\"TopicController\"]\n        MSGC[\"MessageController\"]\n        NOTIFC[\"NotificationController\"]\n    end\n\n    subgraph SEC[\"security + config\"]\n        RESOLVER[\"UtenteCorrenteResolver<br/>Bearer token to AppUser\"]\n        TOKENS[\"TokenStore<br/>mappa in memoria\"]\n        WSCONF[\"WebSocketConfig<br/>broker /topic /queue\"]\n        INTERC[\"StompAuthInterceptor<br/>CONNECT to Principal\"]\n    end\n\n    subgraph SRV[\"service - qui vivono le regole\"]\n        AUTHS[\"AuthService<br/>BCrypt, 409, 401\"]\n        TOPICS[\"TopicService<br/>404, 409\"]\n        MSGS[\"MessageService<br/>403 se non iscritto\"]\n        NOTIFS[\"NotificationService\"]\n    end\n\n    subgraph REPO[\"repository + database\"]\n        REPOS[\"AppUser / Topic / Subscription<br/>Message / Notification Repository\"]\n        DB[(\"PostgreSQL\")]\n    end\n\n    BROKER[\"SimpMessagingTemplate<br/>broker in memoria\"]\n\n    LOGIN --> API\n    ELENCO --> API\n    BACHECA --> API\n    CAMP --> API\n    APP --> STOMP\n    BACHECA --> STOMP\n    CAMP --> STOMP\n\n    API -->|\"HTTP + Bearer\"| AUTHC\n    API -->|\"HTTP + Bearer\"| TOPICC\n    API -->|\"HTTP + Bearer\"| MSGC\n    API -->|\"HTTP + Bearer\"| NOTIFC\n    STOMP -->|\"CONNECT + SUBSCRIBE\"| INTERC\n\n    TOPICC -.->|\"@UtenteCorrente\"| RESOLVER\n    MSGC -.->|\"@UtenteCorrente\"| RESOLVER\n    NOTIFC -.->|\"@UtenteCorrente\"| RESOLVER\n    RESOLVER --> TOKENS\n    INTERC --> TOKENS\n    AUTHS --> TOKENS\n    INTERC --> WSCONF\n\n    AUTHC --> AUTHS\n    TOPICC --> TOPICS\n    MSGC --> MSGS\n    NOTIFC --> NOTIFS\n\n    AUTHS --> REPOS\n    TOPICS --> REPOS\n    MSGS --> REPOS\n    NOTIFS --> REPOS\n    REPOS --> DB\n\n    MSGC ==>|\"dopo il commit\"| BROKER\n    BROKER -.->|\"/topic/feed/{nome}\"| BACHECA\n    BROKER -.->|\"/user/queue/notifications\"| CAMP"}, {"titolo": "3. Registrazione, login e le due strade del token", "src": "sequenceDiagram\n    autonumber\n    participant B as Browser\n    participant AC as AuthController\n    participant AS as AuthService\n    participant TS as TokenStore\n    participant DB as PostgreSQL\n    participant WS as StompAuthInterceptor\n\n    B->>AC: POST /api/auth/register {username, password}\n    AC->>AS: registra(richiesta)\n    AS->>DB: existsByUsername\n    alt nome gia preso\n        AS-->>B: 409 il nome utente e gia preso\n    else nome libero\n        AS->>AS: encoder.encode(password) con BCrypt\n        AS->>DB: INSERT users (password_hash)\n        AS->>TS: crea(username) - UUID casuale\n        AS-->>B: 201 {username, token}\n    end\n\n    Note over B: il token resta in memoria nel componente App\n\n    B->>AC: POST /api/auth/login\n    AC->>AS: login(richiesta)\n    AS->>DB: findByUsername\n    AS->>AS: encoder.matches(password, hash)\n    Note right of AS: mai ricalcolare l hash e confrontare le stringhe:<br/>il sale sarebbe diverso e non coinciderebbero mai\n    AS-->>B: 200 {username, token} oppure 401 credenziali non valide\n\n    B->>WS: CONNECT con header Authorization Bearer token\n    WS->>TS: utenteDi(token)\n    TS-->>WS: username\n    WS->>WS: accessor.setUser(() -> username)\n    Note right of WS: da qui convertAndSendToUser sa dove consegnare.<br/>Senza questo passaggio la sessione resta anonima<br/>e i messaggi personali spariscono in silenzio"}, {"titolo": "4. La pubblicazione di un messaggio (il cuore della consegna)", "src": "sequenceDiagram\n    autonumber\n    participant M as Browser di mario\n    participant MC as MessageController\n    participant MS as MessageService\n    participant DB as PostgreSQL\n    participant BR as Broker STOMP\n    participant L as Browser di lucia\n\n    M->>MC: POST /api/topics/java/messages {text}\n    MC->>MC: @Valid - testo vuoto o oltre 500 caratteri = 400\n    MC->>MC: @UtenteCorrente - token assente o invalido = 401\n    MC->>MS: pubblica(\"java\", mario, testo)\n\n    rect rgb(238, 244, 255)\n        Note over MS,DB: una sola transazione\n        MS->>DB: findByName(\"java\")\n        alt topic inesistente\n            MS-->>M: 404\n        end\n        MS->>DB: existsByUserAndTopic(mario, java)\n        alt mario non e iscritto\n            MS-->>M: 403 so chi sei, ma qui non puoi\n        end\n        MS->>DB: INSERT messages\n        MS->>DB: SELECT iscritti diversi da mario\n        MS->>DB: INSERT notifications - una riga per ogni iscritto\n    end\n\n    Note over MS,DB: COMMIT: da qui in poi il messaggio esiste davvero\n\n    MS-->>MC: RisultatoPubblicazione {messaggio, consegne}\n    MC->>BR: convertAndSend(\"/topic/feed/java\", messaggio)\n    BR-->>L: MESSAGE sul feed - lo riceve chiunque abbia la pagina aperta\n    MC->>BR: convertAndSendToUser(\"lucia\", \"/queue/notifications\", notifica)\n    BR-->>L: MESSAGE sulla coda privata - accende la campanella\n    MC-->>M: 201 il messaggio creato\n\n    Note over BR,L: se lucia e offline il frame viene scartato senza errori:<br/>la riga in notifications resta l unica garanzia"}, {"titolo": "5. Chi era offline", "src": "sequenceDiagram\n    autonumber\n    participant L as Browser di lucia\n    participant BR as Broker STOMP\n    participant NC as NotificationController\n    participant DB as PostgreSQL\n\n    Note over L: lucia chiude la finestra\n\n    BR--xL: convertAndSendToUser non trova sessioni:<br/>nessuna eccezione, nessun log\n    Note over DB: la riga in notifications resta li\n\n    Note over L: lucia rientra\n    L->>BR: CONNECT + SUBSCRIBE /user/queue/notifications\n    Note over BR: il broker non conserva nulla del passato:<br/>da qui in poi ricevera i messaggi nuovi\n\n    L->>NC: GET /api/notifications/unread-count\n    NC->>DB: count where recipient = lucia and read_at is null\n    DB-->>NC: 3\n    NC-->>L: {\"count\": 3} - il badge si accende comunque\n\n    L->>NC: POST /api/notifications/read-all\n    NC->>DB: UNA sola UPDATE su tutte le righe non lette\n    NC-->>L: 204"}, {"titolo": "6. I codici di errore, in un colpo d'occhio", "src": "flowchart TD\n    A[\"Arriva una richiesta su /api\"] --> B{\"Header Authorization<br/>presente e valido?\"}\n    B -->|no| C[\"401<br/>NonAutenticatoException\"]\n    B -->|si| D{\"Il corpo passa @Valid?\"}\n    D -->|no| E[\"400<br/>MethodArgumentNotValidException\"]\n    D -->|si| F{\"La risorsa dell URL esiste?\"}\n    F -->|no| G[\"404<br/>NonTrovatoException\"]\n    F -->|si| H{\"E una scrittura su un topic?\"}\n    H -->|no| L{\"L operazione e gia stata fatta?\"}\n    H -->|si| I{\"Sono iscritto al topic?\"}\n    I -->|no| J[\"403<br/>NonIscrittoException\"]\n    I -->|si| L\n    L -->|si| M[\"409<br/>Conflitto o vincolo unico del database\"]\n    L -->|no| N[\"200 / 201 / 204\"]"}];
+
+// Helper: crea un elemento con classe e testo in una riga sola.
+function make(tag, classe, testo) {
+  const el = document.createElement(tag);
+  if (classe) el.className = classe;
+  if (testo) el.textContent = testo;   // mai innerHTML: il testo resta testo
+  return el;
+}
+
+mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: "default" });
+
+const contenitore = document.getElementById("contenitore");
+
+(async () => {
+  for (let i = 0; i < SORGENTI.length; i++) {
+    const { titolo, src } = SORGENTI[i];
+    contenitore.append(make("h2", null, titolo));
+    const riquadro = make("div", "diagramma");
+    contenitore.append(riquadro);
+    try {
+      // render() restituisce una stringa SVG: la trasformo in nodo con DOMParser,
+      // cosi' finisce nel DOM come elemento e non come HTML interpretato.
+      const { svg } = await mermaid.render("diagramma-" + i, src);
+      const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+      riquadro.replaceChildren(document.importNode(doc.documentElement, true));
+    } catch (errore) {
+      // Un diagramma rotto non deve fermare gli altri: mostro il messaggio e proseguo.
+      riquadro.replaceChildren(make("div", "errore", "Errore di sintassi Mermaid:\n" + errore.message));
+    }
+  }
+})();
+</script>
+</body>
+</html>
